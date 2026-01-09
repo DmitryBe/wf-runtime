@@ -1,0 +1,82 @@
+id: router_branching_wf
+version: 1
+
+input:
+  schema:
+    type: object
+    properties:
+      x:
+        type: integer
+      y:
+        type: integer
+      op:
+        type: string
+    required:
+      - x
+      - y
+      - op
+    additionalProperties: false
+
+output:
+  schema:
+    type: object
+  input_mapping:
+    result: $nodes.pick_result
+
+nodes:
+  - id: route_op
+    kind: router
+    cases:
+      add: "$input.op == 'add'"
+      sub: "$input.op == 'sub'"
+
+  - id: do_add
+    kind: python_code
+    input_mapping:
+      x: $input.x
+      y: $input.y
+    code: |
+      return {"value": input["x"] + input["y"]}
+    output_mapping:
+      value: $.value
+
+  - id: do_substruct
+    kind: python_code
+    input_mapping:
+      x: $input.x
+      y: $input.y
+    code: |
+      return {"value": input["x"] - input["y"]}
+    output_mapping:
+      value: $.value
+
+  - id: pick_result
+    kind: jq_transform
+    input_mapping:
+      add_result: $nodes.do_add.value
+      sub_result: $nodes.do_substruct.value
+    # take either value from add or substruct branch
+    code: "(.add_result // .sub_result)"
+    # keep output_mapping empty so output is {"result": <value>}
+    output_mapping: {}
+
+edges:
+  - from: start
+    to: route_op
+
+  - from: route_op
+    to: do_add
+    when_label: add
+
+  - from: route_op
+    to: do_substruct
+    when_label: sub
+
+  - from: do_add
+    to: pick_result
+
+  - from: do_substruct
+    to: pick_result
+
+  - from: pick_result
+    to: end

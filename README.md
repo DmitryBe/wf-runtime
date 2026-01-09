@@ -141,8 +141,13 @@ later by connecting multiple upstreams into a downstream node.
 
 ## Examples
 
+See `examples/workflows/` for runnable workflow specs:
+
 - `examples/workflows/intent_classifier.yaml`: LLM + structured output
 - `examples/workflows/add_numbers.yaml`: simple `python_code` workflow
+- `examples/workflows/router.yaml`: conditional routing via labeled edges
+- `examples/workflows/concurrent.yaml`: fan-out / fan-in concurrency
+
 
 ## Schema generation
 
