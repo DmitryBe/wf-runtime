@@ -1,0 +1,36 @@
+id: multiply_and_format_workflow
+version: 1
+name: Multiply X and Y and format result
+
+input:
+  schema:
+    type: object
+    properties:
+      x:
+        type: number
+      y:
+        type: number
+    required: [x, y]
+
+nodes:
+  - id: multiply
+    kind: python_code
+    name: Multiply numbers
+    input_mapping:
+      x: $input.x
+      y: $input.y
+    code: |
+      res = input["x"] * input["y"]
+      return res
+
+edges:
+  - from: start
+    to: multiply
+  - from: multiply
+    to: end
+
+output:
+  input_mapping:
+    res: $nodes.multiply
+  schema:
+    type: object

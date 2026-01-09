@@ -1,0 +1,50 @@
+[project]
+name = "wf-runtime"
+version = "0.1.0"
+description = "A small **workflow runtime** that executes a YAML/JSON DSL by compiling it into a LangGraph state machine."
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "jq>=1.10.0",
+    "jsonschema>=4.26.0",
+    "langchain>=1.2.2",
+    "langchain-openai>=1.1.7",
+    "langgraph>=1.0.5",
+    "pydantic>=2.12.5",
+    "pyyaml>=6.0.3",
+    "restrictedpython>=8.1",
+]
+
+[dependency-groups]
+dev = [
+    "black>=25.0.0",
+    "ipython>=9.9.0",
+    "isort>=6.0.0",
+    "pytest>=9.0.2",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=7.0.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ["py312"]
+include = "\\.pyi?$"
+extend-exclude = """
+(
+  /\\.venv
+| /\\.eggs
+| /\\.git
+| /\\.mypy_cache
+| /\\.pytest_cache
+| /\\.ruff_cache
+| /build
+| /dist
+)
+"""
+
+[tool.isort]
+profile = "black"
+line_length = 88
+src_paths = ["src", "tests"]
+known_first_party = ["wf_runtime"]
+skip_gitignore = true
