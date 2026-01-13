@@ -228,6 +228,25 @@ class Workflow(BaseModel):
             'Example: [{"from": "start", "to": "node_id"}, {"from": "node_id", "to": "end"}]'
         ),
     )
+    fail_fast: bool = Field(
+        default=True, description="Whether to fail fast the workflow if any node fails"
+    )
+
+    @model_validator(mode="before")
+    @classmethod
+    def require_output(cls, data: Any):
+        """
+        Validate the workflow.
+        """
+        if isinstance(data, dict) and "id" not in data:
+            raise ValueError("Workflow must have an 'id' section.")
+        if isinstance(data, dict) and "version" not in data:
+            raise ValueError("Workflow must have a 'version' section.")
+        if isinstance(data, dict) and "input" not in data:
+            raise ValueError("Workflow must have an 'input' section.")
+        if isinstance(data, dict) and "output" not in data:
+            raise ValueError("Workflow must have an 'output' section.")
+        return data
 
     @field_validator("nodes")
     def unique_node_ids(cls, nodes: List[Node]):

@@ -394,6 +394,11 @@ properties:
       - $ref: '#/$defs/BranchEdge'
     title: Edges
     type: array
+  fail_fast:
+    default: true
+    description: Whether to fail fast the workflow if any node fails
+    title: Fail Fast
+    type: boolean
   id:
     description: Unique workflow ID
     title: Id

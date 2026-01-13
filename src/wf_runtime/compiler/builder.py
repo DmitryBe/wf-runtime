@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 from typing import Dict, List
 
 from langchain_core.runnables import RunnableConfig
@@ -11,10 +12,21 @@ from wf_runtime.engine.nodes_registry import NODE_EXECUTOR_FACTORIES
 from wf_runtime.engine.state import WorkflowState
 
 
+@dataclass(frozen=True)
+class BuilderOptions:
+    """
+    Options for the builder.
+    """
+
+    # Whether to fast fail the workflow if any node fails
+    fail_fast: bool = field(default=True)
+
+
 def add_node(
     graph: StateGraph,
     node_def: Node,
     compile_ctx: CompileContext,
+    options: BuilderOptions,
 ) -> None:
     """
     Add a DSL node to the LangGraph graph.
@@ -33,7 +45,23 @@ def add_node(
         ctx: RuntimeContext = RuntimeContext(
             configurable=config.get("configurable", {})
         )
-        return await executor(state, ctx)
+        state_update = await executor(state, ctx)
+        if (
+            options.fail_fast
+            and "errors" in state_update
+            and len(state_update["errors"]) > 0
+        ):
+            errors = state_update["errors"]
+            last_error = errors[-1]
+            last_error_message = (
+                last_error["message"]
+                if isinstance(last_error, dict) and "message" in last_error
+                else last_error
+            )
+            raise RuntimeError(
+                f"Node {node_def.id} failed with error: {last_error_message}"
+            )
+        return state_update
 
     graph.add_node(node_def.id, _langgraph_node)
 

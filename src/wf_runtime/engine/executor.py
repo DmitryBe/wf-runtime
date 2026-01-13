@@ -15,6 +15,10 @@ class WorkflowExecutor:
     def __init__(self, compile_ctx: CompileContext) -> None:
         self.compile_ctx = compile_ctx
 
+    async def validate_workflow(self, workflow_spec: Dict[str, Any]) -> None:
+        """Validates a workflow specification. Raises an pydantic validation exception if the workflow is not invalid."""
+        Workflow.model_validate(workflow_spec)
+
     async def ainvoke(
         self,
         workflow_spec: Dict[str, Any],
@@ -22,7 +26,7 @@ class WorkflowExecutor:
         runtime_ctx: Dict[str, Any] | None = None,
     ) -> Dict[str, Any]:
         """
-        Compile and execute a workflow.
+        Compile and execute a workflow. Raises a RuntimeError if the workflow fails.
         """
 
         wf = Workflow.model_validate(workflow_spec)
@@ -39,7 +43,11 @@ class WorkflowExecutor:
             {"input": input_data}, config={"configurable": runtime_ctx}
         )
 
-        result = final_state["output"]
+        errors = final_state.get("errors")
+        if errors:
+            raise RuntimeError(f"Workflow '{wf.id}' failed with errors: {errors}")
+
+        result = final_state.get("output")
         try:
             validate_instance(result, wf.output.schema_)
         except (SchemaValidationError, InvalidSchemaError) as e:

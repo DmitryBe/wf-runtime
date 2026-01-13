@@ -40,7 +40,12 @@ class WorkflowCompiler:
         self._add_system_nodes(graph, workflow)
 
         for node in workflow.nodes:
-            builder.add_node(graph, node, self.compile_ctx)
+            builder.add_node(
+                graph,
+                node,
+                self.compile_ctx,
+                builder.BuilderOptions(fail_fast=workflow.fail_fast),
+            )
 
         self._add_edges(graph, workflow)
 
