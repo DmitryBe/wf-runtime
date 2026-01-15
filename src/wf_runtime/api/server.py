@@ -12,7 +12,7 @@ def create_app() -> FastAPI:
         version="0.1.0",
     )
 
-    app.include_router(health_router, tags=["health"])
-    app.include_router(workflows_router, tags=["workflows"])
+    app.include_router(health_router, prefix="/api", tags=["health"])
+    app.include_router(workflows_router, prefix="/api", tags=["workflows"])
 
     return app

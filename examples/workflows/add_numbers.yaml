@@ -20,7 +20,7 @@ nodes:
       x: $input.x
       y: $input.y
     code: |
-      res = input["x"] * input["y"]
+      res = input["x"] + input["y"]
       return res
 
 edges:

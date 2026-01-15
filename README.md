@@ -24,6 +24,38 @@ From a repo checkout:
 uv sync
 ```
 
+## Run the API server
+
+The runtime exposes a small FastAPI server with workflow endpoints under `/api`.
+After installing dependencies, start it with uvicorn:
+
+```bash
+uv run uvicorn wf_runtime.api.server:create_app --factory --host 0.0.0.0 --port 8000 --reload
+```
+
+Then open the interactive docs at `http://localhost:8000/docs` (or call the JSON
+endpoints at `/api/workflow/validate` and `/api/workflow/invoke`).
+
+## Use `scripts/wfcli.sh`
+
+`scripts/wfcli.sh` is a small helper that POSTs a workflow spec (YAML/JSON) to the
+API server for validation or invocation. By default it targets
+`http://localhost:8000`, or you can set `WF_RUNTIME_URL`, or pass a base URL as
+the last argument.
+
+Examples:
+
+```bash
+# validate a workflow (optionally include input_data to validate against input.schema)
+./scripts/wfcli.sh validate examples/workflows/add_numbers.yaml
+
+# invoke a workflow with inline JSON input
+./scripts/wfcli.sh invoke examples/workflows/add_numbers.yaml '{"x":10,"y":1}'
+
+# invoke with input loaded from a file (prefix with @)
+./scripts/wfcli.sh invoke examples/workflows/add_numbers.yaml @input.json
+```
+
 ## Workflow DSL overview
 
 Workflow files are plain YAML (or JSON) and are validated by `Workflow`:
