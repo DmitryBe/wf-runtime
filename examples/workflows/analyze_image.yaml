@@ -1,0 +1,69 @@
+id: analyze_image_workflow
+version: 1
+name: Analyze image
+
+input:
+  schema:
+    type: object
+    properties:
+      image_url:
+        type: string
+    required: [image_url]
+
+nodes:
+  - id: get_image
+    kind: http_request
+    name: Retrieve image
+    input_mapping:
+      url: $input.image_url
+      method: GET
+    output_mapping:
+      image_b64: $.body_b64
+
+  - id: image_analyzer
+    kind: llm
+    name: Analyze image
+    model: openai:gpt-4o
+    model_params:
+      temperature: 0
+    input_mapping:
+      image_b64: $nodes.get_image.image_b64
+    prompt: |
+      You are a strict image analyzer.
+
+      Task: analyze the image and count the number of cats. 
+      Carefully look at the image and count the number of cats. Also the cats that are partially visible.
+      Return your reasoning in the "reasoning" field (less than 200 tokens).
+
+      Image in base64:
+      {image_b64}
+    output_schema:
+      type: object
+      title: image_analyzer_schema
+      description: Output of the image analyzer
+      properties:
+        reasoning:
+          type: string
+        n_cats:
+          type: number
+      required:
+        - reasoning
+        - n_cats
+    output_mapping:
+      n_cats: $.n_cats
+      reasoning: $.reasoning
+
+edges:
+  - from: start
+    to: get_image
+  - from: get_image
+    to: image_analyzer
+  - from: image_analyzer
+    to: end
+
+output:
+  input_mapping:
+    n_cats: $nodes.image_analyzer.n_cats
+    reasoning: $nodes.image_analyzer.reasoning
+  schema:
+    type: object

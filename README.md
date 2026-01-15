@@ -90,6 +90,35 @@ Most places that accept “mappings” are dictionaries whose values can be:
 
 Resolves `input_mapping` and writes it to node output. Useful for wiring and tests.
 
+#### `http_request`
+
+Makes an HTTP request using `aiohttp`.
+
+- `input_mapping` must include:
+  - `url`: request URL (string; supports Python `.format(**inputs)` templating)
+  - `method`: `GET`, `POST`, `PUT`, `DELETE` (case-insensitive; can also be a `$...` expression)
+- Optional:
+  - `headers`: object of HTTP headers
+  - any other keys in `input_mapping` become request params/body:
+    - for `GET`/`DELETE`: treated as query params
+    - for `POST`/`PUT`: sent as JSON body
+
+Output includes: `ok`, `status`, `headers`, `body_bytes_len`, and one of `body_json` / `body_text` / `body_b64`.
+
+Example:
+
+```yaml
+- id: fetch_user
+  kind: http_request
+  input_mapping:
+    url: "https://api.example.com/users/{user_id}"
+    method: GET
+    user_id: "$input.user_id"
+    headers:
+      Authorization: "Bearer {token}"
+    token: "$input.token"
+```
+
 #### `python_code`
 
 Runs Python code using `RestrictedPython` via `SandboxRunnerImpl`.

@@ -42,6 +42,7 @@ You must translate user requirements into a **complete workflow YAML**.
 
 You may create only the following node kinds:
 
+* `http_request`
 * `python_code`
 * `jq_transform`
 * `llm`
@@ -51,6 +52,7 @@ You may create only the following node kinds:
 
 Choose node kinds according to intent:
 
+* **http_request** → call an HTTP API (GET/POST/PUT/DELETE); `input_mapping` must include `url` and `method`
 * **python_code** → deterministic logic, arithmetic, aggregation, formatting
 * **jq_transform** → JSON reshaping, merging branches, selecting non-null values
 * **llm** → reasoning, classification, extraction, text/image understanding
@@ -62,7 +64,9 @@ Choose node kinds according to intent:
 
 * Each node may define `input_mapping`.
 * Keys become variables inside the node (`input["key"]`).
-* Values must be valid references:
+* Values may be **constants** or **references**:
+  * constants: any value that does not start with `$` (e.g. `GET`, `"https://..."`, numbers, objects)
+  * references:
 
   * `$input.<field>`
   * `$nodes.<node_id>`
