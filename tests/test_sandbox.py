@@ -21,10 +21,10 @@ async def test_sandbox_code():
     output = await executor.ainvoke(
         wf_spec,
         {
-            "image_url": "https://media.istockphoto.com/id/1404190354/photo/group-of-adorable-cats-of-different-breeds-are-resting-on-windowsill-cute-pets.jpg?s=612x612&w=0&k=20&c=9-7lPRMqfIx2Mjl_rwWLArJdd7ozKUhu8eoWV6AMDqs="
+            "image_url": "https://media.hswstatic.com/eyJidWNrZXQiOiJjb250ZW50Lmhzd3N0YXRpYy5jb20iLCJrZXkiOiJnaWZcL3NodXR0ZXJzdG9jay0yMjc4Nzc2MTg3LWhlcm8uanBnIiwiZWRpdHMiOnsicmVzaXplIjp7IndpZHRoIjo4Mjh9fX0="
         },
     )
-    assert output["n_cats"] == 5
+    assert output["n_cats"] == 3
     assert output["reasoning"] is not None
 
 

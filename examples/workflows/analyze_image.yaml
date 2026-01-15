@@ -28,15 +28,18 @@ nodes:
       temperature: 0
     input_mapping:
       image_b64: $nodes.get_image.image_b64
-    prompt: |
-      You are a strict image analyzer.
+    prompt:
+      - type: text
+        content: |
+          You are a strict image analyzer.
 
-      Task: analyze the image and count the number of cats. 
-      Carefully look at the image and count the number of cats. Also the cats that are partially visible.
-      Return your reasoning in the "reasoning" field (less than 200 tokens).
+          Task: analyze the image and count the number of cats. 
+          Carefully look at the image and count the number of cats. Also the cats that are partially visible.
+          Return your reasoning in the "reasoning" field (less than 200 tokens).
+      - type: image_url
+        content: |
+          data:image/jpeg;base64,{image_b64}
 
-      Image in base64:
-      {image_b64}
     output_schema:
       type: object
       title: image_analyzer_schema
