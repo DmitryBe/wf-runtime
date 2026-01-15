@@ -15,9 +15,9 @@ class WorkflowExecutor:
     def __init__(self, compile_ctx: CompileContext) -> None:
         self.compile_ctx = compile_ctx
 
-    async def validate_workflow(self, workflow_spec: Dict[str, Any]) -> None:
+    async def validate_workflow(self, workflow_spec: Dict[str, Any]) -> Workflow:
         """Validates a workflow specification. Raises an pydantic validation exception if the workflow is not invalid."""
-        Workflow.model_validate(workflow_spec)
+        return Workflow.model_validate(workflow_spec)
 
     async def ainvoke(
         self,

@@ -1,79 +1,52 @@
-id: my_workflow
+id: parallel_multiply_and_sum
 version: 1
-name: Workflow
 input:
   schema:
     type: object
     properties:
-      name:
-        type: string
-      order_amount:
+      x:
         type: number
     required:
-      - name
-      - order_amount
-    additionalProperties: false
+    - x
 nodes:
-  - id: router
-    kind: router
-    name: Router
-    cases:
-      case1: $input.order_amount < 10
-      case2: $input.order_amount >= 10
-    default: null
-  - id: llm
-    kind: llm
-    name: LLM
-    input_mapping:
-      name: $input.name
-    model: openai:gpt-4.1-mini
-    model_params:
-      temperature: 0.2
-    prompt: |-
-      Generate a short message saying that the customer will get 10% discount
-      Customer name: {name}
-    output_schema: null
-    output_mapping: {}
-  - id: llm_2
-    kind: llm
-    name: LLM
-    input_mapping:
-      name: $input.name
-    model: openai:gpt-4.1-mini
-    model_params:
-      temperature: 0.2
-    prompt: 'Generate a short welcome message for customer with name: {name}'
-    output_schema: null
-    output_mapping: {}
-  - id: jq
-    kind: jq_transform
-    name: JQ
-    input_mapping:
-      val1: $nodes.llm
-      val2: $nodes.llm_2
-    code: (.val1 // .val2)
-    output_mapping: {}
+- id: mul2
+  kind: python_code
+  code: return input["x"] * 2
+  input_mapping:
+    x: $input.x
+  output_mapping: {}
+- id: mul3
+  kind: python_code
+  code: return input["x"] * 3
+  input_mapping:
+    x: $input.x
+  output_mapping: {}
+- id: add
+  kind: python_code
+  code: 'return {"val": input["a"] + input["b"]}'
+  input_mapping:
+    a: $nodes.mul2
+    b: $nodes.mul3
+  output_mapping:
+    val: $.val
 edges:
-  - from: start
-    to: router
-    when_label: null
-  - from: router
-    to: llm
-    when_label: case2
-  - from: router
-    to: llm_2
-    when_label: case1
-  - from: llm
-    to: jq
-    when_label: null
-  - from: llm_2
-    to: jq
-    when_label: null
-  - from: jq
-    to: end
-    when_label: null
+- from: start
+  to: mul2
+- from: start
+  to: mul3
+- from: mul2
+  to: add
+- from: mul3
+  to: add
+- from: add
+  to: end
 output:
   input_mapping:
-    result: $nodes.jq
+    val: $nodes.add.val
   schema:
     type: object
+    properties:
+      val:
+        type: number
+    required:
+    - val
