@@ -68,6 +68,34 @@ class NoopNode(NodeBase, IOConfig):
     kind: Literal["noop"] = "noop"
 
 
+class HttpRequestNode(NodeBase, IOConfig):
+    kind: Literal["http_request"] = "http_request"
+    timeout_s: float = Field(default=5.0, description="Timeout in seconds")
+
+    @field_validator("input_mapping", mode="before")
+    @classmethod
+    def validate_input_mapping(cls, input_mapping: Dict[str, Any]) -> Dict[str, Any]:
+
+        if "url" not in input_mapping:
+            raise ValueError("url must be in the input mapping")
+
+        if "method" not in input_mapping:
+            raise ValueError(
+                "method must be in the input mapping (allowed values: GET, POST, PUT, DELETE)"
+            )
+
+        # If method is a literal (not an expression), validate allowed values.
+        method = input_mapping.get("method")
+        if isinstance(method, str) and not method.startswith("$"):
+            allowed = {"GET", "POST", "PUT", "DELETE"}
+            if method.upper() not in allowed:
+                raise ValueError(
+                    "method must be one of GET, POST, PUT, DELETE (or a $-expression)"
+                )
+
+        return input_mapping
+
+
 class LLMPromptPart(BaseModel):
     """
     A single multimodal prompt part.
@@ -257,6 +285,7 @@ Node = Union[
     JQNode,
     PythonCodeNode,
     RouterNode,
+    HttpRequestNode,
 ]
 
 

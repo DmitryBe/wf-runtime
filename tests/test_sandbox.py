@@ -77,3 +77,66 @@ async def test_sandbox_code():
 #     out_path = os.path.join("examples", "workflows", "generated-wf.yaml")
 #     with open(out_path, "w") as f:
 #         yaml.safe_dump(wf_obj, f, sort_keys=False)
+
+
+async def test_calc():
+    import statistics
+
+    spendings_2025 = [
+        1_364,
+        1_600,
+        1_000,
+        1_000,
+        1_429,
+        1_319,
+        1_438,
+        1_878,
+        1_940,
+        2_715,
+        3_613,
+        4_412,
+    ]
+    avg = statistics.mean(spendings_2025)
+    std = statistics.stdev(spendings_2025)
+    minimum = min(spendings_2025)
+    maximum = max(spendings_2025)
+    median = statistics.median(spendings_2025)
+    q1 = statistics.quantiles(spendings_2025, n=4)[0]
+    q3 = statistics.quantiles(spendings_2025, n=4)[2]
+    total = sum(spendings_2025)
+    count = len(spendings_2025)
+    print(f"Spendings (US $ per month, 2025): {spendings_2025}")
+    print(f"Count: {count}")
+    print(f"Total: {total}")
+    print(f"Average: {avg:.2f}")
+    print(f"Median: {median:.2f}")
+    print(f"Standard deviation: {std:.2f}")
+    print(f"Minimum: {minimum}")
+    print(f"Q1 (25th percentile): {q1:.2f}")
+    print(f"Q3 (75th percentile): {q3:.2f}")
+    print(f"Maximum: {maximum}")
+
+
+async def test_http_request_node():
+    url = "https://media.hswstatic.com/eyJidWNrZXQiOiJjb250ZW50Lmhzd3N0YXRpYy5jb20iLCJrZXkiOiJnaWZcL3NodXR0ZXJzdG9jay0yMjc4Nzc2MTg3LWhlcm8uanBnIiwiZWRpdHMiOnsicmVzaXplIjp7IndpZHRoIjo4Mjh9fX0="
+    import base64
+
+    import aiohttp
+
+    timeout = aiohttp.ClientTimeout(total=5)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(url) as resp:
+            assert resp.status == 200, f"Failed to get image: {resp.status}"
+            img_bytes = await resp.read()
+            # JPEG starts with 0xFF 0xD8 0xFF (next byte varies: APP0=0xE0, APP1=0xE1, etc.)
+            # assert img_bytes.startswith(b"\xff\xd8\xff") or img_bytes.startswith(
+            #     b"\x89PNG"
+            # ), "Response is not an image"
+
+            # encode
+            img_b64 = base64.b64encode(img_bytes).decode("utf-8")
+            print(img_b64)
+
+            # decode
+            decoded_bytes = base64.b64decode(img_b64)
+            assert decoded_bytes == img_bytes

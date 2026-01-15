@@ -4,6 +4,7 @@ from typing import Callable, Dict
 
 from wf_runtime.engine.nodes.base import CompileContext, NodeExecutor
 from wf_runtime.engine.nodes.end import make_end_executor
+from wf_runtime.engine.nodes.http_request import make_http_request_executor
 from wf_runtime.engine.nodes.jq_transform import make_jq_executor
 from wf_runtime.engine.nodes.llm import make_llm_executor
 from wf_runtime.engine.nodes.noop import make_noop_executor
@@ -19,4 +20,5 @@ NODE_EXECUTOR_FACTORIES: Dict[str, Callable[[object, CompileContext], NodeExecut
     "python_code": make_python_code_executor,
     "llm": make_llm_executor,
     "router": make_router_executor,
+    "http_request": make_http_request_executor,
 }
