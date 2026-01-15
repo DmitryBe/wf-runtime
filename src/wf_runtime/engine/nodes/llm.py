@@ -44,7 +44,8 @@ def make_llm_executor(node_def: LLMNode, compile_ctx: CompileContext) -> NodeExe
             )
 
         try:
-            inputs: Dict[str, Any] = resolve_inputs(state, node_def.input_mapping, options=None)  # type: ignore[arg-type]
+            # Use default strict resolving semantics (same as most other nodes).
+            inputs: Dict[str, Any] = resolve_inputs(state, node_def.input_mapping)
             msg = _format_msg(node_def.prompt, inputs)
             result = await llm.ainvoke([msg])
             if isinstance(result, AIMessage):

@@ -216,7 +216,7 @@ The JSON Schema for the DSL is generated from `Workflow.model_json_schema(by_ali
 and stored as YAML:
 
 ```bash
-python scripts/generate_schema.py --out docs/dsl_schema.yaml
+python scripts/generate_schema.py --out resources/dsl_schema.yaml
 ```
 
 ## Development
