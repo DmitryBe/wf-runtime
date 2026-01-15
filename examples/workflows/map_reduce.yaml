@@ -1,0 +1,59 @@
+id: my_workflow
+version: 1
+name: Workflow
+input:
+  schema:
+    type: object
+    properties:
+      val:
+        type: number
+    required:
+      - val
+    additionalProperties: false
+nodes:
+  - id: py_1
+    kind: python_code
+    name: Multiply by 2
+    input_mapping:
+      val: $input.val
+    code: return input["val"] * 2
+    output_mapping: {}
+    timeout_s: 1
+  - id: py_2
+    kind: python_code
+    name: Multiple by 3
+    input_mapping:
+      val: $input.val
+    code: return input["val"] * 2
+    output_mapping: {}
+    timeout_s: 1
+  - id: py_3
+    kind: python_code
+    name: Reduce
+    input_mapping:
+      val1: $nodes.py_1
+      val2: $nodes.py_2
+    code: return input['val1'] + input['val2']
+    output_mapping: {}
+    timeout_s: 1
+edges:
+  - from: start
+    to: py_1
+    when_label: null
+  - from: start
+    to: py_2
+    when_label: null
+  - from: py_1
+    to: py_3
+    when_label: null
+  - from: py_2
+    to: py_3
+    when_label: null
+  - from: py_3
+    to: end
+    when_label: null
+output:
+  input_mapping:
+    result: $nodes.py_3
+  schema:
+    type: object

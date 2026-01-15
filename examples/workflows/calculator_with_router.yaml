@@ -1,0 +1,114 @@
+id: calculator_workflow
+version: 1
+name: Calculator (example)
+input:
+  schema:
+    type: object
+    properties:
+      op:
+        type: string
+      x:
+        type: number
+      'y':
+        type: number
+    required:
+      - op
+      - x
+      - 'y'
+    additionalProperties: false
+nodes:
+  - id: router_1
+    kind: router
+    name: Router
+    cases:
+      add: $input.op == 'add'
+      sub: $input.op == 'sub'
+      mul: $input.op == 'mul'
+      div: $input.op == 'div'
+    default: null
+  - id: py_1
+    kind: python_code
+    name: Add
+    input_mapping:
+      x: $input.x
+      'y': $input.y
+    code: |
+      return input["x"] + input["y"]
+    output_mapping: {}
+    timeout_s: 1
+  - id: py_2
+    kind: python_code
+    name: Sub
+    input_mapping:
+      x: $input.x
+      'y': $input.y
+    code: |
+      return input["x"] - input["y"]
+    output_mapping: {}
+    timeout_s: 1
+  - id: jq_1
+    kind: jq_transform
+    name: JQ
+    input_mapping:
+      val1: $nodes.py_1
+      val2: $nodes.py_2
+      val3: $nodes.py_3
+      val4: $nodes.py_4
+    code: (.val1 // .val2 // .val3 // .val4)
+    output_mapping: {}
+  - id: py_3
+    kind: python_code
+    name: Mul
+    input_mapping:
+      x: $input.x
+      'y': $input.y
+    code: |
+      return input["x"] * input["y"]
+    output_mapping: {}
+    timeout_s: 1
+  - id: py_4
+    kind: python_code
+    name: Div
+    input_mapping:
+      x: $input.x
+      'y': $input.y
+    code: |
+      return input["x"] / input["y"]
+    output_mapping: {}
+    timeout_s: 1
+edges:
+  - from: start
+    to: router_1
+    when_label: null
+  - from: router_1
+    to: py_1
+    when_label: add
+  - from: router_1
+    to: py_2
+    when_label: sub
+  - from: py_1
+    to: jq_1
+    when_label: null
+  - from: py_2
+    to: jq_1
+    when_label: null
+  - from: jq_1
+    to: end
+    when_label: null
+  - from: router_1
+    to: py_3
+    when_label: mul
+  - from: py_3
+    to: jq_1
+    when_label: null
+  - from: router_1
+    to: py_4
+    when_label: div
+  - from: py_4
+    to: jq_1
+    when_label: null
+output:
+  input_mapping:
+    result: $nodes.jq_1
+  schema:
+    type: object

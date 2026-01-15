@@ -1,0 +1,72 @@
+id: my_workflow
+version: 1
+name: Workflow
+input:
+  schema:
+    type: object
+    properties:
+      text:
+        type: string
+    required:
+      - text
+    additionalProperties: false
+nodes:
+  - id: llm_1
+    kind: llm
+    name: LLM
+    input_mapping:
+      text: $input.text
+    model: openai:gpt-4.1
+    model_params:
+      temperature: 0.2
+    prompt: |-
+      You are an information extractor.
+      Analyze user name and infer required information using schema provided.
+
+      Name:
+      {text}
+    output_schema:
+      type: object
+      title: info_extractor
+      description: information extractor
+      properties:
+        reasoning:
+          type: string
+          description: 100 tokens max reasoning
+        nationality:
+          type: string
+          description: user nationality
+      additionalProperties: false
+    output_mapping: {}
+  - id: llm_2
+    kind: llm
+    name: LLM
+    input_mapping:
+      nationality: $nodes.llm_1.nationality
+      name: $input.text
+    model: openai:gpt-4.1-mini
+    model_params:
+      temperature: 0.2
+    prompt: |-
+      Welcome user on his national language
+
+      User: {name}
+      Nationality: {nationality}
+    output_schema: null
+    output_mapping: {}
+edges:
+  - from: start
+    to: llm_1
+    when_label: null
+  - from: llm_1
+    to: llm_2
+    when_label: null
+  - from: llm_2
+    to: end
+    when_label: null
+output:
+  input_mapping:
+    result: $nodes.llm_2
+    nationality: $nodes.llm_1.nationality
+  schema:
+    type: object
