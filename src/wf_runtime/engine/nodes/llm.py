@@ -5,9 +5,9 @@ from typing import Any, Dict
 
 from langchain.chat_models import init_chat_model
 from langchain.chat_models.base import BaseChatModel
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 
-from wf_runtime.dsl.models import LLMNode, LLMPrompt
+from wf_runtime.dsl.models import LLMNode, LLMPrompt, LLMPromptPart
 from wf_runtime.engine.mappings import (
     apply_output_mapping,
     resolve_inputs,
@@ -30,7 +30,9 @@ def make_llm_executor(node_def: LLMNode, compile_ctx: CompileContext) -> NodeExe
 
     llm: BaseChatModel = init_chat_model(node_def.model, **node_def.model_params)
     if node_def.output_schema:
-        llm = llm.with_structured_output(schema=node_def.output_schema)
+        llm = llm.with_structured_output(
+            schema=node_def.output_schema.model_dump(exclude_none=True)
+        )
 
     async def _exec(
         state: WorkflowState, _runtime_ctx: RuntimeContext
@@ -45,6 +47,8 @@ def make_llm_executor(node_def: LLMNode, compile_ctx: CompileContext) -> NodeExe
             inputs: Dict[str, Any] = resolve_inputs(state, node_def.input_mapping, options=None)  # type: ignore[arg-type]
             msg = _format_msg(node_def.prompt, inputs)
             result = await llm.ainvoke([msg])
+            if isinstance(result, AIMessage):
+                result = result.content
             outputs = apply_output_mapping(result, node_def.output_mapping)
             if compile_ctx.emit_event:
                 await compile_ctx.emit_event(
@@ -78,14 +82,26 @@ def _format_msg(prompt: LLMPrompt, inputs: Dict[str, Any]) -> HumanMessage:
 
     if isinstance(prompt, list):
         content: list[dict[str, Any]] = []
-        for t, v in prompt:
+        for part in prompt:
+            # Be tolerant if a raw dict slipped through (e.g. constructed directly)
+            if isinstance(part, dict):
+                t = part.get("type")
+                v = part.get("content") or part.get("text") or part.get("url")
+            else:
+                part = part  # type: ignore[no-redef]
+                if isinstance(part, LLMPromptPart):
+                    t = part.type
+                    v = part.content
+                else:
+                    raise ValueError(f"Unsupported prompt part: {part!r}")
+
             if t == "text":
-                content.append({"type": "text", "text": v.format(**inputs)})
+                content.append({"type": "text", "text": str(v).format(**inputs)})
             elif t == "image_url":
                 content.append(
                     {
                         "type": "image_url",
-                        "image_url": {"url": v.format(**inputs)},
+                        "image_url": {"url": str(v).format(**inputs)},
                         # url or "data:{mime};base64,{b64}"
                     }
                 )

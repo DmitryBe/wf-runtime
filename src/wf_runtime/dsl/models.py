@@ -68,7 +68,49 @@ class NoopNode(NodeBase, IOConfig):
     kind: Literal["noop"] = "noop"
 
 
-LLMPrompt = Union[str, List[tuple[Literal["text", "image_url"], str]]]
+class LLMPromptPart(BaseModel):
+    """
+    A single multimodal prompt part.
+
+    We use an object here (instead of a 2-tuple) because OpenAI's structured-output
+    JSON Schema subset does not support tuple-style schemas (Pydantic emits
+    `prefixItems`), which breaks `response_format` validation.
+    """
+
+    type: Literal["text", "image_url"] = Field(
+        ..., description="Part type: 'text' or 'image_url'."
+    )
+    content: str = Field(
+        ...,
+        description=(
+            "Part content.\n"
+            "- For type='text': the text content.\n"
+            "- For type='image_url': a URL or a data-URI (data:{mime};base64,{b64})."
+        ),
+    )
+
+
+LLMPrompt = Union[str, List[LLMPromptPart]]
+
+
+class LLMSchema(BaseModel):
+    """
+    Schema for LLM output.
+    """
+
+    type: str = Field(default="object", description="Schema type, e.g. 'object'")
+    title: str = Field(..., description="Schema title, e.g. 'intent_classifier_output'")
+    description: str = Field(
+        ..., description="Schema description, e.g. 'Output of the intent classifier'"
+    )
+    properties: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Schema properties, e.g. {'intent': {'type': 'string', 'enum': ['positive', 'negative']}}",
+    )
+    required: List[str] | None = Field(
+        default=None,
+        description="Schema required fields (optional)",
+    )
 
 
 class LLMNode(NodeBase, IOConfig):
@@ -85,7 +127,7 @@ class LLMNode(NodeBase, IOConfig):
             "\n"
             "Supported formats:\n"
             "- Text-only: a plain string.\n"
-            "- Multimodal: a list of (type, content) tuples where type is 'text' or 'image_url'.\n"
+            "- Multimodal: a list of objects with keys {type, content}.\n"
             "\n"
             "Text prompt example:\n"
             "```\n"
@@ -100,21 +142,67 @@ class LLMNode(NodeBase, IOConfig):
             "Multimodal prompt example:\n"
             "```\n"
             "[\n"
-            '  ("text", "Analyze the image carefully and list 3 potential hygiene issues."),\n'
-            '  ("image_url", "https://example.com/kitchen.jpg"),\n'
+            '  {"type": "text", "content": "Analyze the image carefully and list 3 potential hygiene issues."},\n'
+            '  {"type": "image_url", "content": "https://example.com/kitchen.jpg"},\n'
             "]\n"
             "```\n"
             "\n"
             "Image can also be passed as a data-URI, e.g.\n"
             "```\n"
-            '("image_url", f"data:{mime};base64,{b64}")\n'
+            '{"type": "image_url", "content": f"data:{mime};base64,{b64}"}\n'
             "```"
         ),
     )
-    output_schema: JsonSchema | None = Field(
+    output_schema: LLMSchema | None = Field(
         default=None,
-        description="Output schema, e.g. {'type': 'object', 'title': 'Schema title', 'description': 'Schema description', 'properties': {'intent': {'type': 'string', 'enum': ['positive', 'negative']}}, 'required': ['intent']}",
+        description="Output schema.",
     )
+
+    @field_validator("prompt", mode="before")
+    @classmethod
+    def _normalize_prompt(cls, v: Any) -> Any:
+        """
+        Backward compatibility:
+        - Accept legacy tuple form: [("text", "..."), ("image_url", "...")]
+        - Accept OpenAI-style objects: {"type":"text","text":...} and
+          {"type":"image_url","image_url":{"url":...}}
+        Normalize into our canonical {type, content} objects.
+        """
+
+        if isinstance(v, list):
+            out: list[Any] = []
+            for part in v:
+                # legacy: 2-tuple / 2-list
+                if isinstance(part, (tuple, list)) and len(part) == 2:
+                    t, c = part
+                    out.append({"type": t, "content": c})
+                    continue
+
+                if isinstance(part, dict):
+                    # already canonical
+                    if "type" in part and "content" in part:
+                        out.append(part)
+                        continue
+
+                    # OpenAI-ish variants
+                    t = part.get("type")
+                    if t == "text" and "text" in part:
+                        out.append({"type": "text", "content": part["text"]})
+                        continue
+                    if t == "image_url":
+                        if "url" in part:
+                            out.append({"type": "image_url", "content": part["url"]})
+                            continue
+                        img = part.get("image_url")
+                        if isinstance(img, dict) and "url" in img:
+                            out.append({"type": "image_url", "content": img["url"]})
+                            continue
+
+                out.append(part)
+            return out
+
+        # Non-list (string / other) unchanged; Pydantic will validate.
+        return v
 
 
 class ToolNode(NodeBase, IOConfig):

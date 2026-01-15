@@ -127,40 +127,97 @@ $defs:
         type: object
       output_schema:
         anyOf:
-        - type: string
-        - additionalProperties: true
-          type: object
+        - $ref: '#/$defs/LLMSchema'
         - type: 'null'
         default: null
-        title: Output Schema
+        description: Output schema.
       prompt:
         anyOf:
         - type: string
         - items:
-            maxItems: 2
-            minItems: 2
-            prefixItems:
-            - enum:
-              - text
-              - image_url
-              type: string
-            - type: string
-            type: array
+            $ref: '#/$defs/LLMPromptPart'
           type: array
-        description: "LLM prompt.\n\nCan be either:\n- a plain string, or\n- a multimodal\
-          \ list of `(type, value)` tuples.\n\nMultimodal tuples are converted to\
-          \ a LangChain `HumanMessage(content=[...])` payload, e.g.\n`(\"text\", \"\
-          ...\")` -> `{\"type\": \"text\", \"text\": \"...\"}`\n`(\"image_url\", \"\
-          ...\")` -> `{\"type\": \"image_url\", \"image_url\": {\"url\": \"...\"}}`\n\
-          \nExample (multimodal):\n[\n  (\"text\", \"Analyze the image carefully and\
-          \ list 3 potential hygiene issues.\"),\n  (\"image_url\", \"https://example.com/kitchen.jpg\"\
-          ),\n  (\"image_url\", f\"data:{mime};base64,{b64}\"),  # data-URI\n]"
+        description: "Prompt to send to the LLM.\n\nSupported formats:\n- Text-only:\
+          \ a plain string.\n- Multimodal: a list of objects with keys {type, content}.\n\
+          \nText prompt example:\n```\nYou are a strict classifier.\nTask: classify\
+          \ the user's text into exactly one label:\n- positive\n- negative\nText:\n\
+          {text}\n```\n\nMultimodal prompt example:\n```\n[\n  {\"type\": \"text\"\
+          , \"content\": \"Analyze the image carefully and list 3 potential hygiene\
+          \ issues.\"},\n  {\"type\": \"image_url\", \"content\": \"https://example.com/kitchen.jpg\"\
+          },\n]\n```\n\nImage can also be passed as a data-URI, e.g.\n```\n{\"type\"\
+          : \"image_url\", \"content\": f\"data:{mime};base64,{b64}\"}\n```"
         title: Prompt
     required:
     - id
     - model
     - prompt
     title: LLMNode
+    type: object
+  LLMPromptPart:
+    description: 'A single multimodal prompt part.
+
+
+      We use an object here (instead of a 2-tuple) because OpenAI''s structured-output
+
+      JSON Schema subset does not support tuple-style schemas (Pydantic emits
+
+      `prefixItems`), which breaks `response_format` validation.'
+    properties:
+      content:
+        description: 'Part content.
+
+          - For type=''text'': the text content.
+
+          - For type=''image_url'': a URL or a data-URI (data:{mime};base64,{b64}).'
+        title: Content
+        type: string
+      type:
+        description: 'Part type: ''text'' or ''image_url''.'
+        enum:
+        - text
+        - image_url
+        title: Type
+        type: string
+    required:
+    - type
+    - content
+    title: LLMPromptPart
+    type: object
+  LLMSchema:
+    description: Schema for LLM output.
+    properties:
+      description:
+        description: Schema description, e.g. 'Output of the intent classifier'
+        title: Description
+        type: string
+      properties:
+        additionalProperties: true
+        description: 'Schema properties, e.g. {''intent'': {''type'': ''string'',
+          ''enum'': [''positive'', ''negative'']}}'
+        title: Properties
+        type: object
+      required:
+        anyOf:
+        - items:
+            type: string
+          type: array
+        - type: 'null'
+        default: null
+        description: Schema required fields (optional)
+        title: Required
+      title:
+        description: Schema title, e.g. 'intent_classifier_output'
+        title: Title
+        type: string
+      type:
+        default: object
+        description: Schema type, e.g. 'object'
+        title: Type
+        type: string
+    required:
+    - title
+    - description
+    title: LLMSchema
     type: object
   NoopNode:
     properties:
@@ -389,6 +446,11 @@ properties:
       - $ref: '#/$defs/BranchEdge'
     title: Edges
     type: array
+  fail_fast:
+    default: true
+    description: Whether to fail fast the workflow if any node fails
+    title: Fail Fast
+    type: boolean
   id:
     description: Unique workflow ID
     title: Id

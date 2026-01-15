@@ -70,7 +70,7 @@ def resolve_expr(
         rest = expr[len("$nodes.") :]
         parts = rest.split(".")
         if len(parts) == 1:
-            return (state.get("data") or {}).get(parts[0], {})
+            return (state.get("data") or {}).get(parts[0])
 
         node_id = parts[0]
         path = parts[1:]

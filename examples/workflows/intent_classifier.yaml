@@ -1,26 +1,25 @@
 id: intent_classifier_v1
 version: 1
-name: "Intent classifier: positive | negative"
-
+name: 'Intent classifier: positive | negative'
 input:
   schema:
     type: object
     properties:
       text:
         type: string
-        description: "Input text to classify"
-    required: ["text"]
-
+        description: Input text to classify
+    required:
+      - text
 nodes:
   - id: llm_intent
     kind: llm
-    name: "Classify sentiment intent"
-    model: "openai:gpt-4.1-mini"
+    name: Classify sentiment intent
+    model: openai:gpt-4.1-mini
     model_params:
       temperature: 0
       max_tokens: 20
     input_mapping:
-      text: "$input.text"
+      text: $input.text
     prompt: |
       You are a strict classifier.
 
@@ -37,29 +36,33 @@ nodes:
       {text}
     output_schema:
       type: object
-      title: "intent_classifier_output"
-      description: "Output of the intent classifier"
+      title: intent_classifier_output
+      description: Output of the intent classifier
       properties:
         intent:
           type: string
-          enum: ["positive", "negative"]
-      required: ["intent"]
+          enum:
+            - positive
+            - negative
+      required:
+        - intent
     output_mapping:
-      intent: "$.intent"
-
+      intent: $.intent
+edges:
+  - from: start
+    to: llm_intent
+    when_label: null
+  - from: llm_intent
+    to: end
+    when_label: null
 output:
+  input_mapping:
+    intent: $nodes.llm_intent.intent
   schema:
     type: object
     properties:
       intent:
         type: string
-        description: "positive | negative"
-    required: ["intent"]
-  input_mapping:
-    intent: "$nodes.llm_intent.intent"
-
-edges:
-  - from: start
-    to: llm_intent
-  - from: llm_intent
-    to: end
+        description: positive | negative
+    required:
+      - intent
