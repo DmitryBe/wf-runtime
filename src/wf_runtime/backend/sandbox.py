@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import ast
 import asyncio
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
 
-from RestrictedPython import compile_restricted
+from RestrictedPython import RestrictingNodeTransformer, compile_restricted
 from RestrictedPython.Eval import default_guarded_getitem, default_guarded_getiter
 from RestrictedPython.Guards import (
     full_write_guard,
@@ -44,7 +45,10 @@ class SandboxRunnerImpl:
 
         try:
             compiled = compile_restricted(
-                wrapped, filename="<sandboxed_python_code>", mode="exec"
+                wrapped,
+                filename="<sandboxed_python_code>",
+                mode="exec",
+                policy=_SandboxPolicy,
             )
         except SyntaxError as e:
             raise SandboxRunError(
@@ -183,3 +187,56 @@ def _safe_builtins() -> Dict[str, Any]:
     b.update(allowed)
     b.pop("__import__", None)  # no imports
     return b
+
+
+class _SandboxPolicy(RestrictingNodeTransformer):
+    """
+    Custom RestrictedPython policy for wf-runtime.
+
+    RestrictedPython intentionally rejects unknown AST nodes to avoid silently
+    allowing new Python syntax without review. Python's structural pattern
+    matching (`match/case`) introduces new AST nodes (ast.Match and pattern
+    nodes), so we explicitly allow a conservative subset here.
+    """
+
+    # Statement:
+    def visit_Match(self, node: ast.Match):  # pragma: no cover (py<3.10)
+        return self.node_contents_visit(node)
+
+    def visit_match_case(self, node: ast.match_case):  # pragma: no cover (py<3.10)
+        return self.node_contents_visit(node)
+
+    # Pattern nodes (conservative allow-list):
+    def visit_MatchValue(self, node: ast.MatchValue):  # pragma: no cover (py<3.10)
+        return self.node_contents_visit(node)
+
+    def visit_MatchSingleton(
+        self, node: ast.MatchSingleton  # pragma: no cover (py<3.10)
+    ):
+        return self.node_contents_visit(node)
+
+    def visit_MatchSequence(
+        self, node: ast.MatchSequence  # pragma: no cover (py<3.10)
+    ):
+        return self.node_contents_visit(node)
+
+    def visit_MatchMapping(self, node: ast.MatchMapping):  # pragma: no cover (py<3.10)
+        # `rest` captures remaining keys into a variable name.
+        if node.rest:
+            self.check_name(node, node.rest)
+        return self.node_contents_visit(node)
+
+    def visit_MatchStar(self, node: ast.MatchStar):  # pragma: no cover (py<3.10)
+        # `case [*rest]: ...` binds `rest`.
+        if node.name:
+            self.check_name(node, node.name)
+        return self.node_contents_visit(node)
+
+    def visit_MatchAs(self, node: ast.MatchAs):  # pragma: no cover (py<3.10)
+        # `case pattern as name:` and capture patterns `case name:`
+        if node.name:
+            self.check_name(node, node.name)
+        return self.node_contents_visit(node)
+
+    def visit_MatchOr(self, node: ast.MatchOr):  # pragma: no cover (py<3.10)
+        return self.node_contents_visit(node)

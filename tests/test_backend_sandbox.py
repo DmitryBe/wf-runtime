@@ -23,6 +23,24 @@ else:
         )
         assert res == {"discount": 0.10}
 
+    async def test_sandbox_supports_match_case(self):
+        runner = SandboxRunnerImpl()
+        code = """
+match input["op"]:
+    case "add":
+        return {"result": input["a"] + input["b"]}
+    case "mul":
+        return {"result": input["a"] * input["b"]}
+    case _:
+        return {"result": None}
+"""
+        res = await runner.run(
+            code=code,
+            input_data={"op": "mul", "a": 6, "b": 7},
+            timeout_s=2.0,
+        )
+        assert res == {"result": 42}
+
     async def test_sandbox_runs_user_code_returns_const(self):
         runner = SandboxRunnerImpl()
         code = """

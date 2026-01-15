@@ -1,0 +1,55 @@
+id: calculator_workflow
+version: 1
+name: Calculator (example)
+input:
+  schema:
+    type: object
+    properties:
+      op:
+        type: string
+      x:
+        type: number
+      'y':
+        type: number
+    required:
+      - op
+      - x
+      - 'y'
+    additionalProperties: false
+nodes:
+  - id: py_1
+    kind: python_code
+    name: Python
+    input_mapping:
+      op: $input.op
+      x: $input.x
+      'y': $input.y
+    code: |
+      # input_mapping is mapped to input and can be accessed as input["text"]
+
+      op,x,y = input["op"],input["x"],input["y"]
+      match op:
+        case "add":
+          return x + y
+        case "sub":
+          return x - y
+        case "mul":
+          return x * y
+        case "div":
+          return x / y
+        case _:
+          raise Exception("unsupported operation")
+    output_mapping: {}
+    timeout_s: 1
+edges:
+  - from: start
+    to: py_1
+    when_label: null
+  - from: py_1
+    to: end
+    when_label: null
+output:
+  input_mapping:
+    result: $nodes.py_1
+  schema:
+    type: object

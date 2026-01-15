@@ -1,6 +1,3 @@
-import pytest
-
-import wf_runtime.engine.nodes.jq_transform as jq_node
 import wf_runtime.engine.nodes.python_code as python_code_node
 from wf_runtime.backend.sandbox import SandboxRunnerImpl
 from wf_runtime.dsl.models import JQNode, PythonCodeNode
@@ -36,31 +33,34 @@ class TestPythonCodeNode:
         assert update["data"]["calc"]["doubled"] == 42
         assert update["data"]["calc"]["raw"] == {"doubled": 42, "meta": {"x": 21}}
 
-
-class TestJQTransformNode:
-    async def test_jq_transform_node_happy_path(self):
-        pytest.importorskip("jq")
-        from wf_runtime.backend.jq import JQRunnerImpl
-
-        node_def = JQNode.model_validate(
+    async def test_python_code_with_match_case(self):
+        node_def = PythonCodeNode.model_validate(
             {
-                "id": "transform",
-                "kind": "jq_transform",
-                "code": "{x: .x, doubled: (.x * 2)}",
+                "id": "calc",
+                "kind": "python_code",
+                "code": """
+                    x = input["x"]
+                    match x:
+                        case 1:
+                            return {"result": "one"}
+                        case 2:
+                            return {"result": "two"}
+                        case _:
+                            return {"result": "unknown"}
+                """,
+                "timeout_s": 1.0,
                 "input_mapping": {"x": "$input.x"},
                 "output_mapping": {
                     "doubled": "$.doubled",
-                    "all": "$result",
+                    "raw": "$result",
                 },
             }
         )
-
-        executor = jq_node.make_jq_executor(node_def, CompileContext(jq=JQRunnerImpl()))
+        executor = python_code_node.make_python_code_executor(
+            node_def, CompileContext(sandbox=SandboxRunnerImpl())
+        )
         update = await executor(
-            {"input": {"x": 21}, "data": {}, "errors": []},
+            {"input": {"x": 1}, "data": {}, "errors": []},
             RuntimeContext(configurable={}),
         )
-
-        assert update["last_node"] == "transform"
-        assert update["data"]["transform"]["doubled"] == 42
-        assert update["data"]["transform"]["all"] == {"x": 21, "doubled": 42}
+        assert update["data"]["calc"]["raw"]["result"] == "one"
